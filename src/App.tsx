@@ -79,6 +79,8 @@ export default function App() {
   const lowCount = products.filter((p) => p.quantity > 0 && p.quantity <= 5).length;
   const outCount = products.filter((p) => p.quantity === 0).length;
 
+  if (!supabase && !import.meta.env.DEV) return <div className="auth-loading"><strong>Conexão com o banco não configurada.</strong><br />Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY no ambiente de produção.</div>;
+
   const closeForm = () => { setModalOpen(false); setName(''); setCategory(''); setQuantity('0'); };
   const save = async () => {
     if (!name.trim() || !category || !Number.isInteger(Number(quantity)) || Number(quantity) < 0) return;
