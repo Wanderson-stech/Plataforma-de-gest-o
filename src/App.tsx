@@ -19,16 +19,18 @@ export default function App() {
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
-  const [quantity, setQuantity] = useState('0');
+  const [quantity, setQuantity] = useState('1');
   const [expirationDate, setExpirationDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
+  const [toastSequence, setToastSequence] = useState(0);
+  const showToast = (message: string) => { setToast(message); setToastSequence((sequence) => sequence + 1); };
 
   useEffect(() => {
     if (!toast) return;
     const timeout = window.setTimeout(() => setToast(''), TOAST_DURATION_MS);
     return () => window.clearTimeout(timeout);
-  }, [toast]);
+  }, [toastSequence]);
   const [authLoading, setAuthLoading] = useState(Boolean(supabase));
   const [session, setSession] = useState<{ email?: string } | null>(null);
   const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'recover' | 'update'>('signin');
@@ -99,11 +101,11 @@ export default function App() {
 
   if (!supabase && !import.meta.env.DEV) return <div className="auth-loading"><strong>Conexão com o banco não configurada.</strong><br />Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY no ambiente de produção.</div>;
 
-  const closeForm = () => { setModalOpen(false); setName(''); setCategory(''); setQuantity('0'); setExpirationDate(''); };
+  const closeForm = () => { setModalOpen(false); setName(''); setCategory(''); setQuantity('1'); setExpirationDate(''); };
   const save = async () => {
-    if (!name.trim() || !category || (category === 'Medicamentos' && !expirationDate) || !Number.isInteger(Number(quantity)) || Number(quantity) < 0) return;
+    if (!name.trim() || !category || (category === 'Medicamentos' && !expirationDate) || !Number.isInteger(Number(quantity)) || Number(quantity) < 1) return;
     setSaving(true);
-    try { await addProduct({ name: name.trim(), category, quantity: Number(quantity), expiration_date: category === 'Medicamentos' ? expirationDate : null }); closeForm(); await refresh(); setToast('Produto adicionado ao estoque.'); }
+    try { await addProduct({ name: name.trim(), category, quantity: Number(quantity), expiration_date: category === 'Medicamentos' ? expirationDate : null }); closeForm(); await refresh(); showToast('Produto adicionado ao estoque.'); }
     catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível salvar o produto.'); }
     finally { setSaving(false); }
   };
@@ -114,7 +116,7 @@ export default function App() {
   };
   const remove = async () => {
     if (!deleteTarget) return;
-    try { await deleteProduct(deleteTarget.id); setProducts((current) => current.filter((p) => p.id !== deleteTarget.id)); setToast('Produto excluído.'); }
+    try { await deleteProduct(deleteTarget.id); setProducts((current) => current.filter((p) => p.id !== deleteTarget.id)); showToast('Produto excluído.'); }
     catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível excluir o produto.'); }
     finally { setDeleteTarget(null); }
   };
@@ -172,9 +174,9 @@ export default function App() {
         </div>
       </main>
 
-      {modalOpen && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) closeForm(); }}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header><div><h2 id="modal-title">Adicionar produto</h2><p>Inclua um novo item no estoque compartilhado.</p></div><button className="modal-close" onClick={closeForm} aria-label="Fechar">×</button></header><div className="modal-body"><label>Nome do produto<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Caderno universitário" autoFocus /></label><label>Categoria<select value={category} onChange={(e) => { setCategory(e.target.value); if (e.target.value !== 'Medicamentos') setExpirationDate(''); }}><option value="">Selecione uma categoria</option>{categories.map((c) => <option key={c}>{c}</option>)}</select></label>{category === 'Medicamentos' && <label>Data de validade<input type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} required /><small>Informe a validade indicada na embalagem.</small></label>}<label>Quantidade inicial<input type="number" min="0" step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} /><small>Você pode começar com zero unidades.</small></label></div><footer><button className="secondary-button" onClick={closeForm}>Cancelar</button><button className="primary-button" disabled={saving || !name.trim() || !category || (category === 'Medicamentos' && !expirationDate)} onClick={() => void save()}>{saving ? 'Salvando…' : 'Salvar produto'}</button></footer></section></div>}
+      {modalOpen && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) closeForm(); }}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header><div><h2 id="modal-title">Adicionar produto</h2><p>Inclua um novo item no estoque compartilhado.</p></div><button className="modal-close" onClick={closeForm} aria-label="Fechar">×</button></header><div className="modal-body"><label>Nome do produto<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Caderno universitário" autoFocus /></label><label>Categoria<select value={category} onChange={(e) => { setCategory(e.target.value); if (e.target.value !== 'Medicamentos') setExpirationDate(''); }}><option value="">Selecione uma categoria</option>{categories.map((c) => <option key={c}>{c}</option>)}</select></label>{category === 'Medicamentos' && <label>Data de validade<input type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} required /><small>Informe a validade indicada na embalagem.</small></label>}<label>Quantidade inicial<input type="number" min="1" step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} /><small>Informe pelo menos 1 unidade.</small></label></div><footer><button className="secondary-button" onClick={closeForm}>Cancelar</button><button className="primary-button" disabled={saving || !name.trim() || !category || Number(quantity) < 1 || !Number.isInteger(Number(quantity)) || (category === 'Medicamentos' && !expirationDate)} onClick={() => void save()}>{saving ? 'Salvando…' : 'Salvar produto'}</button></footer></section></div>}
       {deleteTarget && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setDeleteTarget(null); }}><section className="modal confirm-modal" role="dialog" aria-modal="true"><header><div><h2>Excluir produto?</h2></div><button className="modal-close" onClick={() => setDeleteTarget(null)} aria-label="Fechar">×</button></header><div className="modal-body"><p>O produto <strong>{deleteTarget.name}</strong> será removido do estoque compartilhado para todos os usuários.</p></div><footer><button className="secondary-button" onClick={() => setDeleteTarget(null)}>Cancelar</button><button className="danger-button" onClick={() => void remove()}>Excluir produto</button></footer></section></div>}
-      {toast && <div className="toast" role="status">✓ &nbsp;{toast}<button onClick={() => setToast('')} aria-label="Fechar">×</button></div>}
+      {toast && <div className="toast" role="status">✓ &nbsp;{toast}<button onClick={() => setToast('')} aria-label="Fechar">×</button><span key={toastSequence} className="toast-timer" aria-hidden="true" /></div>}
     </div>
   );
 }
