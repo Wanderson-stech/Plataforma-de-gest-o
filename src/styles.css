@@ -122,3 +122,8 @@
 .expiry-summary-card.overdue .expiry-summary-icon{background:#f2eee8;color:#8c6844;}
 .expiry-summary-card.overdue:hover,.expiry-summary-card.overdue.selected{border-color:#d8cfc3;}
 @media(max-width:700px){.expiry-summary-card{grid-template-columns:34px minmax(0,1fr);}}
+
+/* Os cartões de resumo são apenas informativos */
+.expiry-summary-card{cursor:default;}
+.expiry-summary-card:hover{border-color:#e5ebe7;box-shadow:none;transform:none;}
+.expiry-summary-card.overdue:hover{border-color:#e6dfd6;}
