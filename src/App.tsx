@@ -5,7 +5,7 @@ import type { Product } from './types';
 
 const categories = ['Medicamentos', 'Higiene pessoal', 'Alimentos', 'Outros'];
 const LOW_STOCK_THRESHOLD = 10;
-const EXPIRY_ALERT_DAYS = 30;
+const EXPIRY_ALERT_OPTIONS = [30, 60, 90] as const;
 const TOAST_DURATION_MS = 5000;
 
 export default function App() {
@@ -16,6 +16,7 @@ export default function App() {
   const [filter, setFilter] = useState('all');
   const [activePage, setActivePage] = useState<'inventory' | 'expirations'>('inventory');
   const [expiryFilter, setExpiryFilter] = useState<'all' | 'upcoming' | 'expired'>('all');
+  const [expiryAlertDays, setExpiryAlertDays] = useState<number>(30);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [name, setName] = useState('');
@@ -107,10 +108,10 @@ export default function App() {
   const lowCount = products.filter((p) => p.quantity > 0 && p.quantity <= LOW_STOCK_THRESHOLD).length;
   const outCount = products.filter((p) => p.quantity === 0).length;
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const expiringProducts = products.filter((p) => p.category === 'Medicamentos' && p.expiration_date).map((p) => {
+  const expiringProducts = products.filter((p) => ['Medicamentos', 'Alimentos'].includes(p.category) && p.expiration_date).map((p) => {
     const expiry = new Date(`${p.expiration_date}T00:00:00`);
     return { ...p, daysUntilExpiry: Math.ceil((expiry.getTime() - today.getTime()) / 86400000) };
-  }).filter((p) => p.daysUntilExpiry <= EXPIRY_ALERT_DAYS).sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
+  }).filter((p) => p.daysUntilExpiry <= expiryAlertDays).sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
   const upcomingCount = expiringProducts.filter((p) => p.daysUntilExpiry >= 0).length;
   const expiredCount = expiringProducts.filter((p) => p.daysUntilExpiry < 0).length;
   const visibleExpiringProducts = expiringProducts.filter((p) => expiryFilter === 'all' || (expiryFilter === 'expired' ? p.daysUntilExpiry < 0 : p.daysUntilExpiry >= 0));
@@ -119,9 +120,9 @@ export default function App() {
 
   const closeForm = () => { setModalOpen(false); setName(''); setCategory(''); setQuantity(''); setExpirationDate(''); };
   const save = async () => {
-    if (!name.trim() || !category || !quantity || (category === 'Medicamentos' && !expirationDate) || !Number.isInteger(Number(quantity)) || Number(quantity) < 1) return;
+    if (!name.trim() || !category || !quantity || (['Medicamentos', 'Alimentos'].includes(category) && !expirationDate) || !Number.isInteger(Number(quantity)) || Number(quantity) < 1) return;
     setSaving(true);
-    try { await addProduct({ name: name.trim(), category, quantity: Number(quantity), expiration_date: category === 'Medicamentos' ? expirationDate : null }); closeForm(); await refresh(); showToast('Produto adicionado ao estoque.'); }
+    try { await addProduct({ name: name.trim(), category, quantity: Number(quantity), expiration_date: ['Medicamentos', 'Alimentos'].includes(category) ? expirationDate : null }); closeForm(); await refresh(); showToast('Produto adicionado ao estoque.'); }
     catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível salvar o produto.'); }
     finally { setSaving(false); }
   };
@@ -183,13 +184,13 @@ export default function App() {
           
           </> : <section className="expiry-page">
             <div className="page-heading expiry-heading">
-              <div><div className="eyebrow"><span className="eyebrow-dot" /> ACOMPANHAMENTO DE VALIDADE</div><h1>Validade dos medicamentos</h1><p>Priorize o que vence logo e revise o que já passou da data.</p></div>
-              <div className="expiry-threshold"><Icon name="calendar" /><span>Aviso antecipado<strong>{EXPIRY_ALERT_DAYS} dias</strong></span></div>
+              <div><div className="eyebrow"><span className="eyebrow-dot" /> ACOMPANHAMENTO DE VALIDADE</div><h1>Validade dos produtos</h1><p>Priorize o que vence logo e revise o que já passou da data.</p></div>
+              <div className="expiry-threshold"><Icon name="calendar" /><label><span>Aviso antecipado</span><select aria-label="Prazo do aviso antecipado" value={expiryAlertDays} onChange={(e) => setExpiryAlertDays(Number(e.target.value))}>{EXPIRY_ALERT_OPTIONS.map((days) => <option key={days} value={days}>{days} dias</option>)}</select></label></div>
             </div>
             <div className="expiry-summary" aria-label="Resumo dos alertas de validade">
               <div className="expiry-summary-card upcoming">
                 <span className="expiry-summary-icon"><Icon name="calendar" /></span>
-                <span className="expiry-summary-copy"><span className="expiry-summary-label">Vencem nos próximos {EXPIRY_ALERT_DAYS} dias</span><strong>{upcomingCount}</strong><small>{upcomingCount === 1 ? 'medicamento para revisar' : 'medicamentos para revisar'}</small></span>
+                <span className="expiry-summary-copy"><span className="expiry-summary-label">Vencem nos próximos {expiryAlertDays} dias</span><strong>{upcomingCount}</strong><small>{upcomingCount === 1 ? 'produto para revisar' : 'produtos para revisar'}</small></span>
               </div>
               <div className="expiry-summary-card overdue">
                 <span className="expiry-summary-icon"><Icon name="alert" /></span>
@@ -197,7 +198,7 @@ export default function App() {
               </div>
             </div>
             <div className="inventory-card expiry-list">
-              <div className="inventory-head expiry-list-head"><div><h2>Medicamentos em atenção</h2><p>Os alertas mostram itens vencidos e os que vencem em até {EXPIRY_ALERT_DAYS} dias.</p></div><span className="item-count">{visibleExpiringProducts.length} {visibleExpiringProducts.length === 1 ? 'item' : 'itens'}</span></div>
+              <div className="inventory-head expiry-list-head"><div><h2>Produtos em atenção</h2><p>Os alertas mostram itens vencidos e os que vencem em até {expiryAlertDays} dias.</p></div><span className="item-count">{visibleExpiringProducts.length} {visibleExpiringProducts.length === 1 ? 'item' : 'itens'}</span></div>
               <div className="expiry-toolbar"><span className="expiry-toolbar-label">Exibir</span><div className="expiry-tabs" role="group" aria-label="Filtrar por situação da validade">
                 <button type="button" className={expiryFilter === 'all' ? 'active' : ''} aria-pressed={expiryFilter === 'all'} onClick={() => setExpiryFilter('all')}>Todos <span>{expiringProducts.length}</span></button>
                 <button type="button" className={expiryFilter === 'upcoming' ? 'active' : ''} aria-pressed={expiryFilter === 'upcoming'} onClick={() => setExpiryFilter('upcoming')}>Próximos <span>{upcomingCount}</span></button>
@@ -207,18 +208,18 @@ export default function App() {
                 const isExpired = p.daysUntilExpiry < 0;
                 const daysLabel = isExpired ? `Vencido há ${Math.abs(p.daysUntilExpiry)} ${Math.abs(p.daysUntilExpiry) === 1 ? 'dia' : 'dias'}` : p.daysUntilExpiry === 0 ? 'Vence hoje' : `Vence em ${p.daysUntilExpiry} ${p.daysUntilExpiry === 1 ? 'dia' : 'dias'}`;
                 return <article className={`expiry-row ${isExpired ? 'expired' : 'upcoming'}`} key={p.id}>
-                  <div className="expiry-main"><span className="expiry-product-icon"><Icon name="medicine" /></span><div className="expiry-product"><strong>{p.name}</strong><small>{p.quantity} {p.quantity === 1 ? 'unidade' : 'unidades'} em estoque</small></div></div>
+                  <div className="expiry-main"><span className="expiry-product-icon"><Icon name={categoryIconName(p.category)} /></span><div className="expiry-product"><strong>{p.name}</strong><small>{p.category} · {p.quantity} {p.quantity === 1 ? 'unidade' : 'unidades'} em estoque</small></div></div>
                   <div className="expiry-date"><small>Data de validade</small><strong>{new Date(`${p.expiration_date}T00:00:00`).toLocaleDateString('pt-BR')}</strong></div>
                   <div className="expiry-status"><span className={`expiry-badge ${isExpired ? 'expired' : 'upcoming'}`}>{daysLabel}</span></div>
                   <button type="button" className="expiry-row-action" onClick={() => { setQuery(p.name); setFilter('all'); setActivePage('inventory'); }} aria-label={`Ver ${p.name} no estoque`}>Ver no estoque <span aria-hidden="true">→</span></button>
                 </article>;
-              })}</div> : <div className="expiry-empty"><span className={`expiry-empty-mark ${expiryFilter === 'expired' && expiredCount ? 'attention' : ''}`} aria-hidden="true">{expiringProducts.length === 0 ? '✓' : '—'}</span><div><h3>{expiringProducts.length === 0 ? 'Tudo em dia' : expiryFilter === 'upcoming' ? 'Nenhum vencimento próximo' : expiryFilter === 'expired' ? 'Nenhum produto vencido' : 'Nenhum produto neste filtro'}</h3><p>{expiringProducts.length === 0 ? `Nenhum medicamento vence nos próximos ${EXPIRY_ALERT_DAYS} dias.` : 'Mude o filtro acima para conferir os outros itens.'}</p></div>{expiryFilter !== 'all' && <button className="secondary-button" onClick={() => setExpiryFilter('all')}>Ver todos</button>}</div>}
+              })}</div> : <div className="expiry-empty"><span className={`expiry-empty-mark ${expiryFilter === 'expired' && expiredCount ? 'attention' : ''}`} aria-hidden="true">{expiringProducts.length === 0 ? '✓' : '—'}</span><div><h3>{expiringProducts.length === 0 ? 'Tudo em dia' : expiryFilter === 'upcoming' ? 'Nenhum vencimento próximo' : expiryFilter === 'expired' ? 'Nenhum produto vencido' : 'Nenhum produto neste filtro'}</h3><p>{expiringProducts.length === 0 ? `Nenhum produto vence nos próximos ${expiryAlertDays} dias.` : 'Mude o filtro acima para conferir os outros itens.'}</p></div>{expiryFilter !== 'all' && <button className="secondary-button" onClick={() => setExpiryFilter('all')}>Ver todos</button>}</div>}
             </div>
           </section>}
         </div>
       </main>
 
-      {modalOpen && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) closeForm(); }}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header><div><h2 id="modal-title">Adicionar produto</h2><p>Inclua um novo item no estoque compartilhado.</p></div><button className="modal-close" onClick={closeForm} aria-label="Fechar">×</button></header><div className="modal-body"><label>Nome do produto<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Caderno universitário" autoFocus /></label><label>Categoria<span className="select-control"><select value={category} onChange={(e) => { setCategory(e.target.value); if (e.target.value !== 'Medicamentos') setExpirationDate(''); }}><option value="">Selecione uma categoria</option>{categories.map((c) => <option key={c}>{c}</option>)}</select></span></label>{category === 'Medicamentos' && <label>Data de validade<input type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} required /><small>Informe a validade indicada na embalagem.</small></label>}<label>Quantidade inicial<input type="number" min="1" step="1" required value={quantity} onChange={(e) => setQuantity(e.target.value)} /><small>Selecione pelo menos 1 unidade para cadastrar.</small></label></div><footer><button className="secondary-button" onClick={closeForm}>Cancelar</button><button className="primary-button" disabled={saving || !name.trim() || !category || !quantity || Number(quantity) < 1 || !Number.isInteger(Number(quantity)) || (category === 'Medicamentos' && !expirationDate)} onClick={() => void save()}>{saving ? 'Salvando…' : 'Salvar produto'}</button></footer></section></div>}
+      {modalOpen && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) closeForm(); }}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header><div><h2 id="modal-title">Adicionar produto</h2><p>Inclua um novo item no estoque compartilhado.</p></div><button className="modal-close" onClick={closeForm} aria-label="Fechar">×</button></header><div className="modal-body"><label>Nome do produto<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Caderno universitário" autoFocus /></label><label>Categoria<span className="select-control"><select value={category} onChange={(e) => { setCategory(e.target.value); if (!['Medicamentos', 'Alimentos'].includes(e.target.value)) setExpirationDate(''); }}><option value="">Selecione uma categoria</option>{categories.map((c) => <option key={c}>{c}</option>)}</select></span></label>{['Medicamentos', 'Alimentos'].includes(category) && <label>Data de validade<input type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} required /><small>Informe a validade indicada na embalagem.</small></label>}<label>Quantidade inicial<input type="number" min="1" step="1" required value={quantity} onChange={(e) => setQuantity(e.target.value)} /><small>Selecione pelo menos 1 unidade para cadastrar.</small></label></div><footer><button className="secondary-button" onClick={closeForm}>Cancelar</button><button className="primary-button" disabled={saving || !name.trim() || !category || !quantity || Number(quantity) < 1 || !Number.isInteger(Number(quantity)) || (['Medicamentos', 'Alimentos'].includes(category) && !expirationDate)} onClick={() => void save()}>{saving ? 'Salvando…' : 'Salvar produto'}</button></footer></section></div>}
       {deleteTarget && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setDeleteTarget(null); }}><section className="modal confirm-modal" role="dialog" aria-modal="true"><header><div><h2>Excluir produto?</h2></div><button className="modal-close" onClick={() => setDeleteTarget(null)} aria-label="Fechar">×</button></header><div className="modal-body"><p>O produto <strong>{deleteTarget.name}</strong> será removido do estoque compartilhado para todos os usuários.</p></div><footer><button className="secondary-button" onClick={() => setDeleteTarget(null)}>Cancelar</button><button className="danger-button" onClick={() => void remove()}>Excluir produto</button></footer></section></div>}
       {toast && <div className="toast" role="status">✓ &nbsp;{toast}<button onClick={() => setToast('')} aria-label="Fechar">×</button><span key={toastSequence} className="toast-timer" aria-hidden="true" /></div>}
     </div>
