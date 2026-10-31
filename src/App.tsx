@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { addProduct, deleteProduct, getProducts, supabase, updateQuantity } from './data';
 import type { Product } from './types';
 
-const categories = ['Medicamentos', 'Higiene pessoal', 'Cadastro no serviço social', 'Fisioterapia', 'Posto de enfermagem', 'Outros'];
+const categories = ['Medicamentos', 'Higiene pessoal', 'Outros'];
 const LOW_STOCK_THRESHOLD = 10;
 const EXPIRY_ALERT_DAYS = 30;
 const TOAST_DURATION_MS = 5000;
@@ -182,15 +182,12 @@ export default function App() {
 }
 
 
-type IconName = 'inventory' | 'package' | 'plus' | 'search' | 'trash' | 'calendar' | 'medicine' | 'hygiene' | 'social' | 'physio' | 'nursing';
+type IconName = 'inventory' | 'package' | 'plus' | 'search' | 'trash' | 'calendar' | 'medicine' | 'hygiene';
 
 function categoryIconName(category: string): IconName {
   const icons: Record<string, IconName> = {
     'Medicamentos': 'medicine',
     'Higiene pessoal': 'hygiene',
-    'Cadastro no serviço social': 'social',
-    'Fisioterapia': 'physio',
-    'Posto de enfermagem': 'nursing',
   };
   return icons[category] ?? 'package';
 }
@@ -206,9 +203,6 @@ function Icon({ name }: { name: IconName }) {
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></>,
     medicine: <><rect x="4.5" y="7" width="15" height="10" rx="5" transform="rotate(-45 12 12)"/><path d="m9.2 14.8 5.6-5.6"/></>,
     hygiene: <><path d="M9 3h6v3l2 2v13H7V8l2-2z"/><path d="M9 3h6M7 11h10M10 15h4"/></>,
-    social: <><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M8 10h8M8 14h8M8 18h5"/></>,
-    physio: <><circle cx="16" cy="5" r="2"/><path d="m14 8-3 4 4 2 2 5M11 12 7 9M14 9l4 2"/></>,
-    nursing: <><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></>,
   };
   return <svg {...common}>{paths[name]}</svg>;
 }
