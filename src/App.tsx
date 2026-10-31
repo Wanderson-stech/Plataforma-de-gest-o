@@ -188,10 +188,10 @@ export default function App() {
             </div>
             <div className="expiry-summary" aria-label="Resumo dos alertas de validade">
               <button type="button" className={`expiry-summary-card upcoming ${expiryFilter === 'upcoming' ? 'selected' : ''}`} onClick={() => setExpiryFilter(expiryFilter === 'upcoming' ? 'all' : 'upcoming')} aria-pressed={expiryFilter === 'upcoming'}>
-                <span className="expiry-summary-icon"><Icon name="calendar" /></span><span className="expiry-summary-copy"><span className="expiry-summary-label">Vencem nos próximos {EXPIRY_ALERT_DAYS} dias</span><strong>{upcomingCount}</strong><small>{upcomingCount === 1 ? 'medicamento para revisar' : 'medicamentos para revisar'}</small></span><span className="expiry-summary-link">Ver itens <b aria-hidden="true">→</b></span>
+                <span className="expiry-summary-icon"><Icon name="calendar" /></span><span className="expiry-summary-copy"><span className="expiry-summary-label">Vencem nos próximos {EXPIRY_ALERT_DAYS} dias</span><strong>{upcomingCount}</strong><small>{upcomingCount === 1 ? 'medicamento para revisar' : 'medicamentos para revisar'}</small>
               </button>
               <button type="button" className={`expiry-summary-card overdue ${expiryFilter === 'expired' ? 'selected' : ''}`} onClick={() => setExpiryFilter(expiryFilter === 'expired' ? 'all' : 'expired')} aria-pressed={expiryFilter === 'expired'}>
-                <span className="expiry-summary-icon"><Icon name="alert" /></span><span className="expiry-summary-copy"><span className="expiry-summary-label">Já vencidos</span><strong>{expiredCount}</strong><small>{expiredCount === 1 ? 'medicamento vencido' : 'medicamentos vencidos'}</small></span><span className="expiry-summary-link">Ver itens <b aria-hidden="true">→</b></span>
+                <span className="expiry-summary-icon"><Icon name="alert" /></span><span className="expiry-summary-copy"><span className="expiry-summary-label">Já vencidos</span><strong>{expiredCount}</strong><small>{expiredCount === 1 ? 'medicamento vencido' : 'medicamentos vencidos'}</small>
               </button>
             </div>
             <div className="inventory-card expiry-list">
