@@ -11,11 +11,13 @@ export default function App() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const [activePage, setActivePage] = useState<'inventory' | 'expirations'>('inventory');
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [quantity, setQuantity] = useState('0');
+  const [expirationDate, setExpirationDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
   const [authLoading, setAuthLoading] = useState(Boolean(supabase));
@@ -78,14 +80,21 @@ export default function App() {
   const totalUnits = products.reduce((n, p) => n + p.quantity, 0);
   const lowCount = products.filter((p) => p.quantity > 0 && p.quantity <= 5).length;
   const outCount = products.filter((p) => p.quantity === 0).length;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const expiringProducts = products.filter((p) => p.expiration_date).map((p) => {
+    const expiry = new Date(`${p.expiration_date}T00:00:00`);
+    return { ...p, daysUntilExpiry: Math.ceil((expiry.getTime() - today.getTime()) / 86400000) };
+  }).filter((p) => p.daysUntilExpiry <= 30).sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
+  const upcomingCount = expiringProducts.filter((p) => p.daysUntilExpiry >= 0).length;
+  const expiredCount = expiringProducts.filter((p) => p.daysUntilExpiry < 0).length;
 
   if (!supabase && !import.meta.env.DEV) return <div className="auth-loading"><strong>Conexão com o banco não configurada.</strong><br />Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY no ambiente de produção.</div>;
 
-  const closeForm = () => { setModalOpen(false); setName(''); setCategory(''); setQuantity('0'); };
+  const closeForm = () => { setModalOpen(false); setName(''); setCategory(''); setQuantity('0'); setExpirationDate(''); };
   const save = async () => {
-    if (!name.trim() || !category || !Number.isInteger(Number(quantity)) || Number(quantity) < 0) return;
+    if (!name.trim() || !category || (category === 'Medicamentos' && !expirationDate) || !Number.isInteger(Number(quantity)) || Number(quantity) < 0) return;
     setSaving(true);
-    try { await addProduct({ name: name.trim(), category, quantity: Number(quantity) }); closeForm(); await refresh(); setToast('Produto adicionado ao estoque.'); }
+    try { await addProduct({ name: name.trim(), category, quantity: Number(quantity), expiration_date: category === 'Medicamentos' ? expirationDate : null }); closeForm(); await refresh(); setToast('Produto adicionado ao estoque.'); }
     catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível salvar o produto.'); }
     finally { setSaving(false); }
   };
@@ -109,13 +118,15 @@ export default function App() {
       <aside className="sidebar">
         <a className="brand" href="#"><span className="brand-mark"><span /></span><span className="brand-name">orbe</span></a>
         <div className="workspace-label">ESPAÇO DE TRABALHO</div>
-        <button className="nav-item active"><Icon name="inventory" /><span>Estoque</span></button>
+        <button className={`nav-item ${activePage === 'inventory' ? 'active' : ''}`} onClick={() => setActivePage('inventory')}><Icon name="inventory" /><span>Estoque</span></button>
+        <button className={`nav-item ${activePage === 'expirations' ? 'active' : ''}`} onClick={() => setActivePage('expirations')}><Icon name="calendar" /><span>Validades</span>{expiringProducts.length > 0 && <span className="nav-count">{expiringProducts.length}</span>}</button>
         <div className="sidebar-bottom"><span className="avatar">{session?.email?.slice(0,1).toUpperCase() ?? 'O'}</span><div><strong>{session?.email ?? 'Operação'}</strong><small>Estoque compartilhado</small></div><button className="signout" onClick={() => void supabase?.auth.signOut()} title="Sair">↗</button></div>
       </aside>
 
       <main className="main-area">
-        <header className="topbar"><div className="breadcrumbs">Workspace <span>/</span> <strong>Gestão de estoque</strong></div><div className="topbar-status"><i /> Todos os dados atualizados</div></header>
+        <header className="topbar"><div className="breadcrumbs">Workspace <span>/</span> <strong>{activePage === 'inventory' ? 'Gestão de estoque' : 'Validades dos produtos'}</strong></div><div className="topbar-status"><i /> Todos os dados atualizados</div></header>
         <div className="page-content">
+          {activePage === 'inventory' ? <>
           <div className="page-heading">
             <div><div className="eyebrow"><span className="eyebrow-dot" /> ESTOQUE INTELIGENTE</div><h1>Gestão de estoque</h1><p>Acompanhe seus produtos e mantenha tudo em ordem.</p></div>
             <Button onClick={() => setModalOpen(true)}><Icon name="plus" />Adicionar produto</Button>
@@ -142,10 +153,17 @@ export default function App() {
             <div className="table-footer"><span>Exibindo {filtered.length} de {products.length} produtos</span><span className="shared-label"><span /> Estoque compartilhado</span></div>
           </div>
           <footer className="page-footer"><span><span className="footer-orb" /> Orbe <span>·</span> Organize hoje. Cresça amanhã.</span><span>Gestão simples, decisões melhores.</span></footer>
+          </> : <section className="expiry-page">
+            <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-dot" /> ACOMPANHAMENTO DE VALIDADE</div><h1>Validades dos produtos</h1><p>Acompanhe os medicamentos que estão perto de vencer ou já venceram.</p></div></div>
+            <div className="expiry-summary"><div className="expiry-summary-card"><span className="expiry-summary-label">Vencem nos próximos 30 dias</span><strong>{upcomingCount}</strong><small>medicamentos</small></div><div className="expiry-summary-card overdue"><span className="expiry-summary-label">Já vencidos</span><strong>{expiredCount}</strong><small>medicamentos</small></div></div>
+            <div className="inventory-card expiry-list"><div className="inventory-head"><div><h2>Produtos que precisam de atenção</h2><p>Os alertas aparecem até 30 dias antes do vencimento.</p></div><span className="item-count">{expiringProducts.length} {expiringProducts.length === 1 ? 'produto' : 'produtos'}</span></div>
+              {expiringProducts.length ? <div className="expiry-rows">{expiringProducts.map((p) => <article className={`expiry-row ${p.daysUntilExpiry < 0 ? 'expired' : ''}`} key={p.id}><span className="expiry-indicator" /><div className="expiry-product"><strong>{p.name}</strong><small>{p.category} · {p.quantity} {p.quantity === 1 ? 'unidade' : 'unidades'}</small></div><div className="expiry-date"><small>Validade</small><strong>{new Date(`${p.expiration_date}T00:00:00`).toLocaleDateString('pt-BR')}</strong></div><span className="expiry-status">{p.daysUntilExpiry < 0 ? `Venceu há ${Math.abs(p.daysUntilExpiry)} ${Math.abs(p.daysUntilExpiry) === 1 ? 'dia' : 'dias'}` : p.daysUntilExpiry === 0 ? 'Vence hoje' : `Vence em ${p.daysUntilExpiry} ${p.daysUntilExpiry === 1 ? 'dia' : 'dias'}`}</span></article>)}</div> : <div className="expiry-empty"><div className="expiry-empty-mark">✓</div><h3>Nenhum medicamento próximo do vencimento</h3><p>Os produtos com validade informada aparecerão aqui quando faltarem 30 dias ou menos.</p><button className="secondary-button" onClick={() => setActivePage('inventory')}>Voltar ao estoque</button></div>}
+            </div>
+          </section>}
         </div>
       </main>
 
-      {modalOpen && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) closeForm(); }}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header><div><h2 id="modal-title">Adicionar produto</h2><p>Inclua um novo item no estoque compartilhado.</p></div><button className="modal-close" onClick={closeForm} aria-label="Fechar">×</button></header><div className="modal-body"><label>Nome do produto<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Caderno universitário" autoFocus /></label><label>Categoria<select value={category} onChange={(e) => setCategory(e.target.value)}><option value="">Selecione uma categoria</option>{categories.map((c) => <option key={c}>{c}</option>)}</select></label><label>Quantidade inicial<input type="number" min="0" step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} /><small>Você pode começar com zero unidades.</small></label></div><footer><button className="secondary-button" onClick={closeForm}>Cancelar</button><button className="primary-button" disabled={saving || !name.trim() || !category} onClick={() => void save()}>{saving ? 'Salvando…' : 'Salvar produto'}</button></footer></section></div>}
+      {modalOpen && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) closeForm(); }}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header><div><h2 id="modal-title">Adicionar produto</h2><p>Inclua um novo item no estoque compartilhado.</p></div><button className="modal-close" onClick={closeForm} aria-label="Fechar">×</button></header><div className="modal-body"><label>Nome do produto<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Caderno universitário" autoFocus /></label><label>Categoria<select value={category} onChange={(e) => { setCategory(e.target.value); if (e.target.value !== 'Medicamentos') setExpirationDate(''); }}><option value="">Selecione uma categoria</option>{categories.map((c) => <option key={c}>{c}</option>)}</select></label>{category === 'Medicamentos' && <label>Data de validade<input type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} required /><small>Informe a validade indicada na embalagem.</small></label>}<label>Quantidade inicial<input type="number" min="0" step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} /><small>Você pode começar com zero unidades.</small></label></div><footer><button className="secondary-button" onClick={closeForm}>Cancelar</button><button className="primary-button" disabled={saving || !name.trim() || !category || (category === 'Medicamentos' && !expirationDate)} onClick={() => void save()}>{saving ? 'Salvando…' : 'Salvar produto'}</button></footer></section></div>}
       {deleteTarget && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setDeleteTarget(null); }}><section className="modal confirm-modal" role="dialog" aria-modal="true"><header><div><h2>Excluir produto?</h2></div><button className="modal-close" onClick={() => setDeleteTarget(null)} aria-label="Fechar">×</button></header><div className="modal-body"><p>O produto <strong>{deleteTarget.name}</strong> será removido do estoque compartilhado para todos os usuários.</p></div><footer><button className="secondary-button" onClick={() => setDeleteTarget(null)}>Cancelar</button><button className="danger-button" onClick={() => void remove()}>Excluir produto</button></footer></section></div>}
       {toast && <div className="toast" role="status">✓ &nbsp;{toast}<button onClick={() => setToast('')} aria-label="Fechar">×</button></div>}
     </div>
@@ -153,9 +171,9 @@ export default function App() {
 }
 
 
-function Icon({ name }: { name: 'inventory' | 'package' | 'plus' | 'search' | 'trash' }) {
+function Icon({ name }: { name: 'inventory' | 'package' | 'plus' | 'search' | 'trash' | 'calendar' }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true as const };
-  const paths = { inventory: <><path d="M4 5.5h16v14H4z"/><path d="M8 5.5v-2h8v2M8 10h8M8 14h5"/></>, package: <><path d="m4 7 8-4 8 4v10l-8 4-8-4z"/><path d="m4 7 8 4 8-4M12 11v10M8 5l8 4"/></>, plus: <><path d="M12 5v14M5 12h14"/></>, search: <><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></>, trash: <><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></> };
+  const paths = { inventory: <><path d="M4 5.5h16v14H4z"/><path d="M8 5.5v-2h8v2M8 10h8M8 14h5"/></>, package: <><path d="m4 7 8-4 8 4v10l-8 4-8-4z"/><path d="m4 7 8 4 8-4M12 11v10M8 5l8 4"/></>, plus: <><path d="M12 5v14M5 12h14"/></>, search: <><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></>, trash: <><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></>, calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></> };
   return <svg {...common}>{paths[name]}</svg>;
 }
 

@@ -5,6 +5,7 @@ create table if not exists public.products (
   name text not null check (char_length(trim(name)) between 1 and 120),
   category text not null check (char_length(trim(category)) between 1 and 60),
   quantity integer not null default 0 check (quantity >= 0),
+  expiration_date date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
