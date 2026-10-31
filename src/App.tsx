@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { addProduct, deleteProduct, getProducts, supabase, updateQuantity } from './data';
 import type { Product } from './types';
 
-const categories = ['Medicamentos', 'Higiene pessoal', 'Outros'];
+const categories = ['Medicamentos', 'Higiene pessoal', 'Alimentos', 'Outros'];
 const LOW_STOCK_THRESHOLD = 10;
 const EXPIRY_ALERT_DAYS = 30;
 const TOAST_DURATION_MS = 5000;
@@ -180,7 +180,7 @@ export default function App() {
             </tbody></table></div>
             <div className="table-footer"><span>Exibindo {filtered.length} de {products.length} produtos</span><span className="shared-label"><span /> Estoque compartilhado</span></div>
           </div>
-          <footer className="page-footer"><span><span className="footer-orb" /> Orbe <span>·</span> Controle de estoque compartilhado</span><span>Dados atualizados em tempo real.</span></footer>
+          
           </> : <section className="expiry-page">
             <div className="page-heading expiry-heading">
               <div><div className="eyebrow"><span className="eyebrow-dot" /> ACOMPANHAMENTO DE VALIDADE</div><h1>Validade dos medicamentos</h1><p>Priorize o que vence logo e revise o que já passou da data.</p></div>
@@ -224,12 +224,13 @@ export default function App() {
 }
 
 
-type IconName = 'inventory' | 'package' | 'plus' | 'search' | 'trash' | 'calendar' | 'medicine' | 'hygiene' | 'layers' | 'alert';
+type IconName = 'inventory' | 'package' | 'plus' | 'search' | 'trash' | 'calendar' | 'medicine' | 'hygiene' | 'layers' | 'alert' | 'food';
 
 function categoryIconName(category: string): IconName {
   const icons: Record<string, IconName> = {
     'Medicamentos': 'medicine',
     'Higiene pessoal': 'hygiene',
+    'Alimentos': 'food',
   };
   return icons[category] ?? 'package';
 }
@@ -243,6 +244,7 @@ function Icon({ name }: { name: IconName }) {
     search: <><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></>,
     trash: <><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></>,
+    food: <><path d="M12 9c-4-3-9-.8-9 4.4 0 4.1 2.8 7.6 6.2 7.6 1.2 0 2-.4 2.8-.4s1.6.4 2.8.4c3.4 0 6.2-3.5 6.2-7.6C21 8.2 16 6 12 9Z"/><path d="M12 8c.1-2.4 1.6-4.2 4-5"/></>,
     layers: <><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></>,
     alert: <><path d="M12 3 2.8 19h18.4L12 3Z"/><path d="M12 9v4m0 3h.01"/></>,
     medicine: <><rect x="4.5" y="7" width="15" height="10" rx="5" transform="rotate(-45 12 12)"/><path d="m9.2 14.8 5.6-5.6"/></>,
