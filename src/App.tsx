@@ -157,7 +157,7 @@ export default function App() {
             <div className="table-scroller"><table className="product-table"><thead><tr><th>PRODUTO</th><th>CATEGORIA</th><th>QUANTIDADE</th><th>SITUAÇÃO</th><th><span className="visually-hidden">Ações</span></th></tr></thead><tbody>
               {loading ? <tr><td colSpan={5} className="loading-cell"><span className="spinner" />Carregando estoque...</td></tr> : filtered.map((p) => {
                 const status = p.quantity === 0 ? 'out' : p.quantity <= LOW_STOCK_THRESHOLD ? 'low' : 'ok';
-                return <tr key={p.id}><td><div className="product-name"><span className="product-icon"><Icon name="package" /></span><strong>{p.name}</strong></div></td><td className="category-cell">{p.category}</td><td><div className="quantity-control"><button onClick={() => void changeQuantity(p, -1)} disabled={p.quantity <= 0} aria-label={`Diminuir quantidade de ${p.name}`}>−</button><strong>{p.quantity}</strong><button onClick={() => void changeQuantity(p, 1)} aria-label={`Aumentar quantidade de ${p.name}`}>+</button><span>un.</span></div></td><td><span className={`status-badge ${status}`}>{status === 'ok' ? 'Em estoque' : status === 'low' ? 'Estoque baixo' : 'Sem estoque'}</span></td><td className="actions-cell"><button className="icon-button delete" aria-label={`Excluir ${p.name}`} onClick={() => setDeleteTarget(p)}><Icon name="trash" /></button></td></tr>;
+                return <tr key={p.id}><td><div className="product-name"><span className="product-icon"><Icon name={categoryIconName(p.category)} /></span><strong>{p.name}</strong></div></td><td className="category-cell">{p.category}</td><td><div className="quantity-control"><button onClick={() => void changeQuantity(p, -1)} disabled={p.quantity <= 0} aria-label={`Diminuir quantidade de ${p.name}`}>−</button><strong>{p.quantity}</strong><button onClick={() => void changeQuantity(p, 1)} aria-label={`Aumentar quantidade de ${p.name}`}>+</button><span>un.</span></div></td><td><span className={`status-badge ${status}`}>{status === 'ok' ? 'Em estoque' : status === 'low' ? 'Estoque baixo' : 'Sem estoque'}</span></td><td className="actions-cell"><button className="icon-button delete" aria-label={`Excluir ${p.name}`} onClick={() => setDeleteTarget(p)}><Icon name="trash" /></button></td></tr>;
               })}
               {!loading && filtered.length === 0 && <tr><td colSpan={5}><div className="empty-state"><div className="empty-art"><div className="empty-box"><Icon name="package" /></div><i className="spark s1">✳</i><i className="spark s2">✦</i><i className="spark s3">·</i></div><h3>{products.length === 0 ? 'Seu estoque começa aqui' : 'Nenhum produto encontrado'}</h3><p>{products.length === 0 ? 'Cadastre seu primeiro produto para começar a acompanhar as quantidades.' : 'Tente ajustar sua busca ou trocar o filtro aplicado.'}</p>{products.length === 0 && <Button onClick={() => setModalOpen(true)}><Icon name="plus" />Adicionar primeiro produto</Button>}</div></td></tr>}
             </tbody></table></div>
@@ -182,9 +182,34 @@ export default function App() {
 }
 
 
-function Icon({ name }: { name: 'inventory' | 'package' | 'plus' | 'search' | 'trash' | 'calendar' }) {
+type IconName = 'inventory' | 'package' | 'plus' | 'search' | 'trash' | 'calendar' | 'medicine' | 'hygiene' | 'social' | 'physio' | 'nursing';
+
+function categoryIconName(category: string): IconName {
+  const icons: Record<string, IconName> = {
+    'Medicamentos': 'medicine',
+    'Higiene pessoal': 'hygiene',
+    'Cadastro no serviço social': 'social',
+    'Fisioterapia': 'physio',
+    'Posto de enfermagem': 'nursing',
+  };
+  return icons[category] ?? 'package';
+}
+
+function Icon({ name }: { name: IconName }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true as const };
-  const paths = { inventory: <><path d="M4 5.5h16v14H4z"/><path d="M8 5.5v-2h8v2M8 10h8M8 14h5"/></>, package: <><path d="m4 7 8-4 8 4v10l-8 4-8-4z"/><path d="m4 7 8 4 8-4M12 11v10M8 5l8 4"/></>, plus: <><path d="M12 5v14M5 12h14"/></>, search: <><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></>, trash: <><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></>, calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></> };
+  const paths = {
+    inventory: <><path d="M4 5.5h16v14H4z"/><path d="M8 5.5v-2h8v2M8 10h8M8 14h5"/></>,
+    package: <><path d="m4 7 8-4 8 4v10l-8 4-8-4z"/><path d="m4 7 8 4 8-4M12 11v10M8 5l8 4"/></>,
+    plus: <><path d="M12 5v14M5 12h14"/></>,
+    search: <><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></>,
+    trash: <><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></>,
+    calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></>,
+    medicine: <><rect x="4.5" y="7" width="15" height="10" rx="5" transform="rotate(-45 12 12)"/><path d="m9.2 14.8 5.6-5.6"/></>,
+    hygiene: <><path d="M9 3h6v3l2 2v13H7V8l2-2z"/><path d="M9 3h6M7 11h10M10 15h4"/></>,
+    social: <><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M8 10h8M8 14h8M8 18h5"/></>,
+    physio: <><circle cx="16" cy="5" r="2"/><path d="m14 8-3 4 4 2 2 5M11 12 7 9M14 9l4 2"/></>,
+    nursing: <><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></>,
+  };
   return <svg {...common}>{paths[name]}</svg>;
 }
 
