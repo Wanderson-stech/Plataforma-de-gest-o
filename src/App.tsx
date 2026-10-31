@@ -6,6 +6,7 @@ import type { Product } from './types';
 const categories = ['Medicamentos', 'Higiene pessoal', 'Cadastro no serviço social', 'Fisioterapia', 'Posto de enfermagem', 'Outros'];
 const LOW_STOCK_THRESHOLD = 10;
 const EXPIRY_ALERT_DAYS = 30;
+const TOAST_DURATION_MS = 5000;
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -22,6 +23,12 @@ export default function App() {
   const [expirationDate, setExpirationDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
+
+  useEffect(() => {
+    if (!toast) return;
+    const timeout = window.setTimeout(() => setToast(''), TOAST_DURATION_MS);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
   const [authLoading, setAuthLoading] = useState(Boolean(supabase));
   const [session, setSession] = useState<{ email?: string } | null>(null);
   const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'recover' | 'update'>('signin');
