@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { addProduct, deleteProduct, getProducts, supabase, updateQuantity } from './data';
 import type { Product } from './types';
 
-const categories = ['Acessórios', 'Eletrônicos', 'Escritório', 'Casa', 'Outros'];
+const categories = ['Medicamentos', 'Higiene pessoal', 'Cadastro no serviço social', 'Fisioterapia', 'Posto de enfermagem', 'Outros'];
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
