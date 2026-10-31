@@ -107,3 +107,18 @@
 @media(max-width:920px){.expiry-row{grid-template-columns:minmax(170px,1fr) 120px 145px;gap:12px}.expiry-row-action{grid-column:2/4;justify-self:start;margin-top:-8px}.expiry-summary-card{grid-template-columns:36px minmax(0,1fr);}.expiry-summary-link{grid-column:2}}
 @media(max-width:700px){.metrics-grid{gap:9px}.metric-card{height:78px}.metric-breakdown{font-size:9px}.expiry-heading{align-items:flex-start;flex-direction:column}.expiry-threshold{align-self:flex-start}.expiry-summary{grid-template-columns:1fr;gap:9px}.expiry-summary-card{min-height:105px;padding:13px 14px}.expiry-summary-link{grid-column:2;justify-self:start}.expiry-list .inventory-head{padding:16px}.expiry-toolbar{min-height:48px;padding:0 13px}.expiry-tabs{gap:2px}.expiry-tabs button{padding:0 7px;font-size:10px}.expiry-rows{padding:0 14px}.expiry-row{grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:13px 0}.expiry-main{grid-column:1/3}.expiry-date{grid-column:1}.expiry-status{grid-column:2;grid-row:2;justify-self:end}.expiry-row-action{grid-column:1/3;grid-row:3;justify-self:start;margin:0 -8px}.expiry-empty{padding:24px 16px}.inventory-head{padding:16px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* Ajuste de leitura dos cartões de validade */
+.expiry-summary-card{grid-template-columns:40px minmax(0,1fr);}
+.expiry-summary-copy{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;align-items:center;column-gap:12px;min-width:0;}
+.expiry-summary-label{grid-column:1;grid-row:1;min-width:0;line-height:1.4;overflow-wrap:anywhere;}
+.expiry-summary-copy strong{grid-column:2;grid-row:1/3;justify-self:end;margin:0;font-size:27px;line-height:1;color:#25362e;}
+.expiry-summary-copy small{grid-column:1;grid-row:2;margin-top:4px;}
+.expiry-summary-card.overdue{border-color:#e6dfd6;background:#faf8f5;}
+.expiry-summary-card.overdue::before{background:#a97948;}
+.expiry-summary-card.overdue .expiry-summary-label{color:#56645d;}
+.expiry-summary-card.overdue .expiry-summary-copy strong{color:#806747;}
+.expiry-summary-card.overdue .expiry-summary-copy small{color:#87928c;}
+.expiry-summary-card.overdue .expiry-summary-icon{background:#f2eee8;color:#8c6844;}
+.expiry-summary-card.overdue:hover,.expiry-summary-card.overdue.selected{border-color:#d8cfc3;}
+@media(max-width:700px){.expiry-summary-card{grid-template-columns:34px minmax(0,1fr);}}
