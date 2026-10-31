@@ -4,6 +4,8 @@ import { addProduct, deleteProduct, getProducts, supabase, updateQuantity } from
 import type { Product } from './types';
 
 const categories = ['Medicamentos', 'Higiene pessoal', 'Cadastro no serviço social', 'Fisioterapia', 'Posto de enfermagem', 'Outros'];
+const LOW_STOCK_THRESHOLD = 10;
+const EXPIRY_ALERT_DAYS = 30;
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -74,17 +76,17 @@ export default function App() {
 
   const filtered = useMemo(() => products.filter((p) => {
     const matches = `${p.name} ${p.category}`.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'));
-    const state = p.quantity === 0 ? 'out' : p.quantity <= 5 ? 'low' : 'ok';
+    const state = p.quantity === 0 ? 'out' : p.quantity <= LOW_STOCK_THRESHOLD ? 'low' : 'ok';
     return matches && (filter === 'all' || state === filter);
   }), [products, query, filter]);
   const totalUnits = products.reduce((n, p) => n + p.quantity, 0);
-  const lowCount = products.filter((p) => p.quantity > 0 && p.quantity <= 5).length;
+  const lowCount = products.filter((p) => p.quantity > 0 && p.quantity <= LOW_STOCK_THRESHOLD).length;
   const outCount = products.filter((p) => p.quantity === 0).length;
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const expiringProducts = products.filter((p) => p.expiration_date).map((p) => {
+  const expiringProducts = products.filter((p) => p.category === 'Medicamentos' && p.expiration_date).map((p) => {
     const expiry = new Date(`${p.expiration_date}T00:00:00`);
     return { ...p, daysUntilExpiry: Math.ceil((expiry.getTime() - today.getTime()) / 86400000) };
-  }).filter((p) => p.daysUntilExpiry <= 30).sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
+  }).filter((p) => p.daysUntilExpiry <= EXPIRY_ALERT_DAYS).sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
   const upcomingCount = expiringProducts.filter((p) => p.daysUntilExpiry >= 0).length;
   const expiredCount = expiringProducts.filter((p) => p.daysUntilExpiry < 0).length;
 
@@ -138,14 +140,14 @@ export default function App() {
           <div className="metrics-grid">
             <div className="metric-panel"><div className="metric-card"><div className="metric-icon teal"><Icon name="package" /></div><div><p>Produtos cadastrados</p><div className="metric-value">{products.length}<small> itens</small></div></div><span className="metric-orbit" /></div></div>
             <div className="metric-panel"><div className="metric-card"><div className="metric-icon blue"><span>▤</span></div><div><p>Unidades em estoque</p><div className="metric-value">{totalUnits}<small> un.</small></div></div><span className="metric-orbit" /></div></div>
-            <div className="metric-panel"><div className="metric-card"><div className="metric-icon amber"><span>!</span></div><div><p>Precisam de atenção</p><div className="metric-value">{lowCount + outCount}<small> itens</small></div></div><div className="metric-breakdown"><span>{lowCount} baixo</span><span>{outCount} zerado</span></div></div></div>
+            <div className="metric-panel"><div className="metric-card"><div className="metric-icon amber"><span>!</span></div><div><p>Precisam de atenção</p><div className="metric-value">{lowCount + outCount}<small> itens</small></div></div><div className="metric-breakdown"><span>{lowCount} baixo (até {LOW_STOCK_THRESHOLD} un.)</span><span>{outCount} zerado</span></div></div></div>
           </div>
 
           <div className="inventory-card"><div className="inventory-head"><div><h2>Seus produtos</h2><p>Visualize e organize os itens do seu inventário.</p></div><span className="item-count">{products.length} {products.length === 1 ? 'produto' : 'produtos'}</span></div>
             <div className="toolbar"><div className="search-wrap"><Icon name="search" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar produto ou categoria" aria-label="Buscar produto ou categoria" /></div><div className="filter-wrap"><label htmlFor="status-filter">Status</label><select id="status-filter" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">Todos</option><option value="ok">Em estoque</option><option value="low">Estoque baixo</option><option value="out">Sem estoque</option></select></div></div>
             <div className="table-scroller"><table className="product-table"><thead><tr><th>PRODUTO</th><th>CATEGORIA</th><th>QUANTIDADE</th><th>SITUAÇÃO</th><th><span className="visually-hidden">Ações</span></th></tr></thead><tbody>
               {loading ? <tr><td colSpan={5} className="loading-cell"><span className="spinner" />Carregando estoque...</td></tr> : filtered.map((p) => {
-                const status = p.quantity === 0 ? 'out' : p.quantity <= 5 ? 'low' : 'ok';
+                const status = p.quantity === 0 ? 'out' : p.quantity <= LOW_STOCK_THRESHOLD ? 'low' : 'ok';
                 return <tr key={p.id}><td><div className="product-name"><span className="product-icon"><Icon name="package" /></span><strong>{p.name}</strong></div></td><td className="category-cell">{p.category}</td><td><div className="quantity-control"><button onClick={() => void changeQuantity(p, -1)} disabled={p.quantity <= 0} aria-label={`Diminuir quantidade de ${p.name}`}>−</button><strong>{p.quantity}</strong><button onClick={() => void changeQuantity(p, 1)} aria-label={`Aumentar quantidade de ${p.name}`}>+</button><span>un.</span></div></td><td><span className={`status-badge ${status}`}>{status === 'ok' ? 'Em estoque' : status === 'low' ? 'Estoque baixo' : 'Sem estoque'}</span></td><td className="actions-cell"><button className="icon-button delete" aria-label={`Excluir ${p.name}`} onClick={() => setDeleteTarget(p)}><Icon name="trash" /></button></td></tr>;
               })}
               {!loading && filtered.length === 0 && <tr><td colSpan={5}><div className="empty-state"><div className="empty-art"><div className="empty-box"><Icon name="package" /></div><i className="spark s1">✳</i><i className="spark s2">✦</i><i className="spark s3">·</i></div><h3>{products.length === 0 ? 'Seu estoque começa aqui' : 'Nenhum produto encontrado'}</h3><p>{products.length === 0 ? 'Cadastre seu primeiro produto para começar a acompanhar as quantidades.' : 'Tente ajustar sua busca ou trocar o filtro aplicado.'}</p>{products.length === 0 && <Button onClick={() => setModalOpen(true)}><Icon name="plus" />Adicionar primeiro produto</Button>}</div></td></tr>}
@@ -155,9 +157,9 @@ export default function App() {
           <footer className="page-footer"><span><span className="footer-orb" /> Orbe <span>·</span> Organize hoje. Cresça amanhã.</span><span>Gestão simples, decisões melhores.</span></footer>
           </> : <section className="expiry-page">
             <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-dot" /> ACOMPANHAMENTO DE VALIDADE</div><h1>Validades dos produtos</h1><p>Acompanhe os medicamentos que estão perto de vencer ou já venceram.</p></div></div>
-            <div className="expiry-summary"><div className="expiry-summary-card"><span className="expiry-summary-label">Vencem nos próximos 30 dias</span><strong>{upcomingCount}</strong><small>medicamentos</small></div><div className="expiry-summary-card overdue"><span className="expiry-summary-label">Já vencidos</span><strong>{expiredCount}</strong><small>medicamentos</small></div></div>
-            <div className="inventory-card expiry-list"><div className="inventory-head"><div><h2>Produtos que precisam de atenção</h2><p>Os alertas aparecem até 30 dias antes do vencimento.</p></div><span className="item-count">{expiringProducts.length} {expiringProducts.length === 1 ? 'produto' : 'produtos'}</span></div>
-              {expiringProducts.length ? <div className="expiry-rows">{expiringProducts.map((p) => <article className={`expiry-row ${p.daysUntilExpiry < 0 ? 'expired' : ''}`} key={p.id}><span className="expiry-indicator" /><div className="expiry-product"><strong>{p.name}</strong><small>{p.category} · {p.quantity} {p.quantity === 1 ? 'unidade' : 'unidades'}</small></div><div className="expiry-date"><small>Validade</small><strong>{new Date(`${p.expiration_date}T00:00:00`).toLocaleDateString('pt-BR')}</strong></div><span className="expiry-status">{p.daysUntilExpiry < 0 ? `Venceu há ${Math.abs(p.daysUntilExpiry)} ${Math.abs(p.daysUntilExpiry) === 1 ? 'dia' : 'dias'}` : p.daysUntilExpiry === 0 ? 'Vence hoje' : `Vence em ${p.daysUntilExpiry} ${p.daysUntilExpiry === 1 ? 'dia' : 'dias'}`}</span></article>)}</div> : <div className="expiry-empty"><div className="expiry-empty-mark">✓</div><h3>Nenhum medicamento próximo do vencimento</h3><p>Os produtos com validade informada aparecerão aqui quando faltarem 30 dias ou menos.</p><button className="secondary-button" onClick={() => setActivePage('inventory')}>Voltar ao estoque</button></div>}
+            <div className="expiry-summary"><div className="expiry-summary-card"><span className="expiry-summary-label">Vencem nos próximos {EXPIRY_ALERT_DAYS} dias</span><strong>{upcomingCount}</strong><small>medicamentos</small></div><div className="expiry-summary-card overdue"><span className="expiry-summary-label">Já vencidos</span><strong>{expiredCount}</strong><small>medicamentos</small></div></div>
+            <div className="inventory-card expiry-list"><div className="inventory-head"><div><h2>Produtos que precisam de atenção</h2><p>Os alertas aparecem até {EXPIRY_ALERT_DAYS} dias antes do vencimento.</p></div><span className="item-count">{expiringProducts.length} {expiringProducts.length === 1 ? 'produto' : 'produtos'}</span></div>
+              {expiringProducts.length ? <div className="expiry-rows">{expiringProducts.map((p) => <article className={`expiry-row ${p.daysUntilExpiry < 0 ? 'expired' : ''}`} key={p.id}><span className="expiry-indicator" /><div className="expiry-product"><strong>{p.name}</strong><small>{p.category} · {p.quantity} {p.quantity === 1 ? 'unidade' : 'unidades'}</small></div><div className="expiry-date"><small>Validade</small><strong>{new Date(`${p.expiration_date}T00:00:00`).toLocaleDateString('pt-BR')}</strong></div><span className="expiry-status">{p.daysUntilExpiry < 0 ? `Venceu há ${Math.abs(p.daysUntilExpiry)} ${Math.abs(p.daysUntilExpiry) === 1 ? 'dia' : 'dias'}` : p.daysUntilExpiry === 0 ? 'Vence hoje' : `Vence em ${p.daysUntilExpiry} ${p.daysUntilExpiry === 1 ? 'dia' : 'dias'}`}</span></article>)}</div> : <div className="expiry-empty"><div className="expiry-empty-mark">✓</div><h3>Nenhum medicamento próximo do vencimento</h3><p>Os produtos com validade informada aparecerão aqui quando faltarem {EXPIRY_ALERT_DAYS} dias ou menos.</p><button className="secondary-button" onClick={() => setActivePage('inventory')}>Voltar ao estoque</button></div>}
             </div>
           </section>}
         </div>
