@@ -127,3 +127,8 @@
 .expiry-summary-card{cursor:default;}
 .expiry-summary-card:hover{border-color:#e5ebe7;box-shadow:none;transform:none;}
 .expiry-summary-card.overdue:hover{border-color:#e6dfd6;}
+
+/* Seletor do prazo de aviso antecipado */
+.expiry-threshold label{display:flex;flex-direction:column;gap:2px;cursor:pointer;}
+.expiry-threshold label>span{color:#77847d;font-size:10px;}
+.expiry-threshold select{min-width:82px;padding:0 18px 0 0;border:0;outline:0;background-color:transparent;color:#273830;font:700 12px Manrope,sans-serif;cursor:pointer;}
