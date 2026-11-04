@@ -1,4 +1,4 @@
-# Orbe — gestão de estoque
+# Orbe - gestão de estoque
 
 MVP de gestão de estoque compartilhado, feito em React, TypeScript, Vite e Supabase. Somente contas autorizadas podem consultar e administrar o catálogo.
 
